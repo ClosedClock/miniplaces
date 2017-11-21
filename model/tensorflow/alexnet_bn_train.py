@@ -6,7 +6,7 @@ from DataLoader import *
 
 
 # Dataset Parameters
-batch_size = 250
+batch_size = 50
 # batch_size = 256
 load_size = 256
 fine_size = 224
@@ -17,7 +17,7 @@ data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 learning_rate = 0.005
 dropout = 0.5 # Dropout, probability to keep units
 # training_iters = 50000
-training_iters = 10000
+training_iters = 100000
 do_training = True
 do_validation = True
 do_testing = True
@@ -28,11 +28,11 @@ start_from = 'trained_model/droping_learning_rate/alexnet_bn-15000'
 test_result_file = 'test_prediction.txt'
 
 # Start checking for rate reductions
-check_reduce_rate_threshold = 1000
+check_reduce_rate_threshold = 2000
 lowest_learning_rate = 0.000001
 
 # Iterations to check if average accuracy has increased
-check_reduce_rate = 200 // step_display
+check_reduce_rate = 1000 // step_display
 
 
 
@@ -127,9 +127,8 @@ def alexnet(x, keep_dropout, train_phase):
 
     # Output FC
     out = tf.add(tf.matmul(fc7, weights['wo']), biases['bo'])
-    soft_out = tf.nn.softmax(out)
     
-    return soft_out
+    return out
 
 # Construct dataloader
 opt_data_train = {
@@ -250,6 +249,7 @@ with tf.Session() as sess:
                     if (step // step_display) % check_reduce_rate == 0:
                         if sum(acc5_vec) / check_reduce_rate <= previous_acc5:
                             learning_rate = learning_rate * 0.8
+                            train_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
                         previous_acc5 = sum(acc5_vec) / check_reduce_rate
                         acc5_vec = []
