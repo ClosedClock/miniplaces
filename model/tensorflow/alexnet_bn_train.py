@@ -6,7 +6,7 @@ from DataLoader import *
 
 
 # Dataset Parameters
-batch_size = 50
+batch_size = 100
 # batch_size = 256
 load_size = 256
 fine_size = 224
@@ -14,7 +14,7 @@ c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.005
+learning_rate = 0.001
 dropout = 0.5 # Dropout, probability to keep units
 # training_iters = 50000
 training_iters = 100000
@@ -22,17 +22,17 @@ do_training = True
 do_validation = True
 do_testing = True
 step_display = 10
-step_save = 1000
+step_save = 5000
 path_save = './alexnet_bn'
-start_from = 'trained_model/droping_learning_rate/alexnet_bn-15000'
+start_from = ''
 test_result_file = 'test_prediction.txt'
 
-# Start checking for rate reductions
-check_reduce_rate_threshold = 2000
-lowest_learning_rate = 0.000001
-
-# Iterations to check if average accuracy has increased
-check_reduce_rate = 1000 // step_display
+# # Start checking for rate reductions
+# check_reduce_rate_threshold = 2000
+# lowest_learning_rate = 0.000001
+#
+# # Iterations to check if average accuracy has increased
+# check_reduce_rate = 1000 // step_display
 
 
 
@@ -215,10 +215,10 @@ with tf.Session() as sess:
         print('Initialized')
 
     if do_training:
-        # Previous top-5 accuracy
-        previous_acc5 = 0
-        # Vector of top-5 accuracies
-        acc5_vec = []
+        # # Previous top-5 accuracy
+        # previous_acc5 = 0
+        # # Vector of top-5 accuracies
+        # acc5_vec = []
 
         for step in range(training_iters):
             # Load a batch of training data
@@ -243,16 +243,15 @@ with tf.Session() as sess:
                       "{:.4f}".format(acc1) + ", Top5 = " + \
                       "{:.4f}".format(acc5))
 
-                # Check if the accuracy is improving or not
-                if step >= check_reduce_rate_threshold % learning_rate > lowest_learning_rate:
-                    acc5_vec.append(acc5)
-                    if (step // step_display) % check_reduce_rate == 0:
-                        if sum(acc5_vec) / check_reduce_rate <= previous_acc5:
-                            learning_rate = learning_rate * 0.8
-                            train_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
-
-                        previous_acc5 = sum(acc5_vec) / check_reduce_rate
-                        acc5_vec = []
+                # # Check if the accuracy is improving or not
+                # if step >= check_reduce_rate_threshold % learning_rate > lowest_learning_rate:
+                #     acc5_vec.append(acc5)
+                #     if (step // step_display) % check_reduce_rate == 0:
+                #         if sum(acc5_vec) / check_reduce_rate <= previous_acc5:
+                #             learning_rate = learning_rate * 0.8
+                #
+                #         previous_acc5 = sum(acc5_vec) / check_reduce_rate
+                #         acc5_vec = []
 
             # Run optimization op (backprop)
             sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout, train_phase: True})
