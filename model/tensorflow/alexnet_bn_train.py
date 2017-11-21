@@ -24,6 +24,18 @@ path_save = 'alexnet_bn'
 start_from = 'trained_model/alexnet_bn-10000'
 test_result_file = 'test_prediction.txt'
 
+# Start checking for rate reductions
+check_reduce_rate_threshold = 2500
+
+# Iterations to check if average accuracy has increased
+check_reduce_rate = 500
+
+# Current maximum top-5 accuracy
+max_acc5 = 0
+
+# Vector of top-5 accuracies
+acc5_vec = []
+
 def batch_norm_layer(x, train_phase, scope_bn):
     return batch_norm(x, decay=0.9, center=True, scale=True,
     updates_collections=None,
@@ -193,6 +205,19 @@ with tf.Session() as sess:
         
         # Run optimization op (backprop)
         sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout, train_phase: True})
+        
+        
+        # Check if the accuracy is improving or not
+		if step >= check_reduce_rate_threshold:
+			acc5_vec.append(acc5)
+			if step % check_reduce_rate:
+				if sum(acc5_vec)/check_reduce_rate <= max_acc5:
+					learning_rate = learning_rate/10  
+					print("Learning rate is now" + str(learning_rate) + "\n")
+				else:
+					max_acc5 = sum(acc5_vec)/check_reduce_rate
+					
+				acc5_vec = []
         
         step += 1
         
