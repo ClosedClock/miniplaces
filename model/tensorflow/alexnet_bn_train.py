@@ -13,7 +13,7 @@ c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.001
+learning_rate = 0.002
 dropout = 0.5 # Dropout, probability to keep units
 # training_iters = 50000
 training_iters = 100000
@@ -190,7 +190,7 @@ with tf.Session() as sess:
         
         if step % step_display == 0:
             print('[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            print("Learning rate is now" + str(learning_rate) + "\n")
+            print("Learning rate is now " + str(learning_rate))
 
             # Calculate batch loss and accuracy on training set
             l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False}) 
@@ -212,7 +212,7 @@ with tf.Session() as sess:
                 acc5_vec.append(acc5)
                 if (step // step_display) % check_reduce_rate == 0:
                     if sum(acc5_vec) / check_reduce_rate <= previous_acc5:
-                        learning_rate = learning_rate / 10
+                        learning_rate = learning_rate / 2
 
                     previous_acc5 = sum(acc5_vec) / check_reduce_rate
                     acc5_vec = []

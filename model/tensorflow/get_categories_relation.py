@@ -1,18 +1,19 @@
 from requests import get
 import numpy as np
+import matplotlib.pyplot as plt
 
 sss_url = "http://swoogle.umbc.edu/SimService/GetSimilarity"
 
 def sss(s1, s2, type='concept', corpus='webbase'):
-	response_string = ''
-	while response_string == '':
-		response = get(sss_url, params={'operation':'api','phrase1':s1,'phrase2':s2,'type':type,'corpus':corpus})
-		response_string = response.text.strip()
-		if response_string == '-Infinity':
-			response_string = '0.0'
-	print s1, s2
-	print response_string
-	return float(response_string)
+    response_string = ''
+    while response_string == '':
+        response = get(sss_url, params={'operation':'api','phrase1':s1,'phrase2':s2,'type':type,'corpus':corpus})
+        response_string = response.text.strip()
+        if response_string == '-Infinity':
+            response_string = '0.0'
+    print(s1, s2)
+    print(response_string)
+    return float(response_string)
 
 
 def get_words_list():
@@ -42,5 +43,24 @@ def save_relation_matrix():
     np.savez('relation.npz', relation)
     return relation
 
+def plot_heatmap():
+    words_list = get_words_list()
+    relation = np.load('relation.npz')['arr_0']
 
-print save_relation_matrix()
+    fig, ax = plt.subplots()
+    fig.canvas.draw()
+    # ax.invert_yaxis()
+    ax.set_xticklabels(words_list, fontsize=5)
+    ax.set_yticklabels(words_list, fontsize=5)
+    plt.xticks(np.arange(100))
+    plt.yticks(np.arange(100))
+    ax.xaxis.tick_top()
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=90)
+
+
+    cax = plt.imshow(relation, cmap='hot', interpolation='nearest')
+    cbar = fig.colorbar(cax, ticks=[0, 0.5, 1])
+
+    plt.show()
+
+
