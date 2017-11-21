@@ -13,7 +13,7 @@ c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.002
+learning_rate = 0.001
 dropout = 0.5 # Dropout, probability to keep units
 # training_iters = 50000
 training_iters = 100000
@@ -26,12 +26,11 @@ test_result_file = 'test_prediction.txt'
 
 # Start checking for rate reductions
 check_reduce_rate_threshold = 2500
+lowest_learning_rate = 0.0000001
 
 # Iterations to check if average accuracy has increased
 check_reduce_rate = 500 // step_display
 
-# Current maximum top-5 accuracy
-max_acc5 = 0
 
 # Vector of top-5 accuracies
 acc5_vec = []
@@ -178,7 +177,10 @@ with tf.Session() as sess:
     else:
         sess.run(init)
         print('Initialized')
-    
+
+    # Previous top-5 accuracy
+    previous_acc5 = 0
+
     step = 0
 
     while step < training_iters:
@@ -205,14 +207,13 @@ with tf.Session() as sess:
                   "{:.4f}".format(acc5))
 
             # Check if the accuracy is improving or not
-            if step >= check_reduce_rate_threshold:
+            if step >= check_reduce_rate_threshold % learning_rate > lowest_learning_rate:
                 acc5_vec.append(acc5)
-                if (step // step_display) % check_reduce_rate:
-                    if sum(acc5_vec) / check_reduce_rate <= max_acc5:
+                if (step // step_display) % check_reduce_rate == 0:
+                    if sum(acc5_vec) / check_reduce_rate <= previous_acc5:
                         learning_rate = learning_rate / 10
-                    else:
-                        max_acc5 = sum(acc5_vec) / check_reduce_rate
 
+                    previous_acc5 = sum(acc5_vec) / check_reduce_rate
                     acc5_vec = []
         
         # Run optimization op (backprop)
