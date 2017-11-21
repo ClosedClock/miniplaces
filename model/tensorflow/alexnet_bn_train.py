@@ -5,8 +5,8 @@ from tensorflow.contrib.layers.python.layers import batch_norm
 from DataLoader import *
 
 # Dataset Parameters
+batch_size = 50
 # batch_size = 256
-batch_size = 250
 load_size = 256
 fine_size = 224
 c = 3
@@ -20,7 +20,7 @@ training_iters = 100000
 do_validation = True
 step_display = 10
 step_save = 5000
-path_save = 'alexnet_bn'
+path_save = './alexnet_bn'
 start_from = ''
 test_result_file = 'test_prediction.txt'
 
@@ -86,6 +86,7 @@ def alexnet(x, keep_dropout, train_phase):
     conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
     conv5 = batch_norm_layer(conv5, train_phase, 'bn5')
     conv5 = tf.nn.relu(conv5)
+    #conv5 = conv4
     pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # FC + ReLU + Dropout

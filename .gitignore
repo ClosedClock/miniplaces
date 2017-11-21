@@ -1,3 +1,9 @@
+# Files occur on server
+.DS_Store
+._.DS_Store
+._images
+._objects
+
 *.pyc
 
 # data
