@@ -5,7 +5,8 @@ from tensorflow.contrib.layers.python.layers import batch_norm
 from DataLoader import *
 
 # Dataset Parameters
-batch_size = 256
+# batch_size = 256
+batch_size = 250
 load_size = 256
 fine_size = 224
 c = 3
@@ -14,11 +15,14 @@ data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 # Training Parameters
 learning_rate = 0.001
 dropout = 0.5 # Dropout, probability to keep units
-training_iters = 50000
+# training_iters = 50000
+training_iters = 0
+do_validation = False
 step_display = 50
 step_save = 10000
 path_save = 'alexnet_bn'
-start_from = ''
+start_from = 'trained_model/alexnet_bn-10000'
+test_result_file = 'test_prediction.txt'
 
 def batch_norm_layer(x, train_phase, scope_bn):
     return batch_norm(x, decay=0.9, center=True, scale=True,
@@ -111,8 +115,18 @@ opt_data_val = {
     'randomize': False
     }
 
-loader_train = DataLoaderDisk(**opt_data_train)
-loader_val = DataLoaderDisk(**opt_data_val)
+opt_data_test = {
+    #'data_h5': 'miniplaces_256_test.h5',
+    'data_root': '../../data/images/test/',   # MODIFY PATH ACCORDINGLY
+    'load_size': load_size,
+    'fine_size': fine_size,
+    'data_mean': data_mean,
+    'randomize': False
+    }
+
+#loader_train = DataLoaderDisk(**opt_data_train)
+#loader_val = DataLoaderDisk(**opt_data_val)
+loader_test = TestDataLoaderDisk(**opt_data_test)
 #loader_train = DataLoaderH5(**opt_data_train)
 #loader_val = DataLoaderH5(**opt_data_val)
 
@@ -124,6 +138,7 @@ train_phase = tf.placeholder(tf.bool)
 
 # Construct model
 logits = alexnet(x, keep_dropout, train_phase)
+top5_values, top5_labels = tf.nn.top_k(logits, k=5)
 
 # Define loss and optimizer
 loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits))
@@ -147,8 +162,10 @@ with tf.Session() as sess:
     # Initialization
     if len(start_from)>1:
         saver.restore(sess, start_from)
+        print('Started from last time: %s' % start_from)
     else:
         sess.run(init)
+        print('Initialized')
     
     step = 0
 
@@ -186,22 +203,42 @@ with tf.Session() as sess:
         
     print("Optimization Finished!")
 
+    if do_validation:
+        # Evaluate on the whole validation set
+        print('Evaluation on the whole validation set...')
+        num_batch = loader_val.size()//batch_size
+        acc1_total = 0.
+        acc5_total = 0.
+        loader_val.reset()
+        for i in range(num_batch):
+            images_batch, labels_batch = loader_val.next_batch(batch_size)
+            acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
+            acc1_total += acc1
+            acc5_total += acc5
+            print("Validation Accuracy Top1 = " + \
+                  "{:.4f}".format(acc1) + ", Top5 = " + \
+                  "{:.4f}".format(acc5))
 
-    # Evaluate on the whole validation set
-    print('Evaluation on the whole validation set...')
-    num_batch = loader_val.size()//batch_size
-    acc1_total = 0.
-    acc5_total = 0.
-    loader_val.reset()
-    for i in range(num_batch):
-        images_batch, labels_batch = loader_val.next_batch(batch_size)    
-        acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
-        acc1_total += acc1
-        acc5_total += acc5
-        print("Validation Accuracy Top1 = " + \
-              "{:.4f}".format(acc1) + ", Top5 = " + \
-              "{:.4f}".format(acc5))
+        acc1_total /= num_batch
+        acc5_total /= num_batch
+        print('Evaluation Finished! Accuracy Top1 = ' + "{:.4f}".format(acc1_total) + ", Top5 = " + "{:.4f}".format(acc5_total))
 
-    acc1_total /= num_batch
-    acc5_total /= num_batch
-    print('Evaluation Finished! Accuracy Top1 = ' + "{:.4f}".format(acc1_total) + ", Top5 = " + "{:.4f}".format(acc5_total))
+
+    # Test on the test set
+    print('Evaluation on the whole test set...')
+    num_batch = loader_test.size()//batch_size
+    loader_test.reset()
+
+    with open(test_result_file, 'w') as f:
+        print('Opened file %s' % test_result_file)
+        for i in range(num_batch):
+            print('There are %d test images left' % (loader_test.size() - i * batch_size))
+            images_batch, filenames_batch = loader_test.next_batch(batch_size)
+            predicted_labels = sess.run(top5_labels, feed_dict={x: images_batch, keep_dropout: 1., train_phase: False})
+            print(predicted_labels)
+            print(predicted_labels.shape)
+            for j in range(len(filenames_batch)):
+                f.write(filenames_batch[j] + ' %d %d %d %d %d\n' % tuple(predicted_labels[j, :].tolist()))
+
+    print('Test Finished!')
+
