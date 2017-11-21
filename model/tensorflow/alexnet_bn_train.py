@@ -6,7 +6,7 @@ from DataLoader import *
 
 
 # Dataset Parameters
-batch_size = 50
+batch_size = 250
 # batch_size = 256
 load_size = 256
 fine_size = 224
@@ -14,25 +14,25 @@ c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.002
+learning_rate = 0.005
 dropout = 0.5 # Dropout, probability to keep units
 # training_iters = 50000
-training_iters = 100000
-do_training = False
+training_iters = 10000
+do_training = True
 do_validation = True
-do_testing = False
+do_testing = True
 step_display = 10
-step_save = 5000
+step_save = 1000
 path_save = './alexnet_bn'
 start_from = 'trained_model/droping_learning_rate/alexnet_bn-15000'
 test_result_file = 'test_prediction.txt'
 
 # Start checking for rate reductions
-check_reduce_rate_threshold = 2500
-lowest_learning_rate = 0.0000001
+check_reduce_rate_threshold = 1000
+lowest_learning_rate = 0.000001
 
 # Iterations to check if average accuracy has increased
-check_reduce_rate = 500 // step_display
+check_reduce_rate = 200 // step_display
 
 
 
@@ -127,8 +127,9 @@ def alexnet(x, keep_dropout, train_phase):
 
     # Output FC
     out = tf.add(tf.matmul(fc7, weights['wo']), biases['bo'])
+    soft_out = tf.nn.softmax(out)
     
-    return out
+    return soft_out
 
 # Construct dataloader
 opt_data_train = {
@@ -181,9 +182,9 @@ train_phase = tf.placeholder(tf.bool)
 
 # Construct model
 logits = alexnet(x, keep_dropout, train_phase)
-top5_values, top5_labels = tf.nn.top_k(logits, k=10)
-logits_relation = tf.matmul(logits, relation_matrix)
-top5_values_relation, top5_labels_relation = tf.nn.top_k(logits_relation, k=10)
+top5_values, top5_labels = tf.nn.top_k(logits, k=5)
+# logits_relation = tf.matmul(logits, relation_matrix)
+# top5_values_relation, top5_labels_relation = tf.nn.top_k(logits_relation, k=10)
 
 # Define loss and optimizer
 loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits))
@@ -192,8 +193,8 @@ train_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(l
 # Evaluate model
 accuracy1 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 1), tf.float32))
 accuracy5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 5), tf.float32))
-accuracy1_relation = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits_relation, y, 1), tf.float32))
-accuracy5_relation = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits_relation, y, 5), tf.float32))
+# accuracy1_relation = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits_relation, y, 1), tf.float32))
+# accuracy5_relation = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits_relation, y, 5), tf.float32))
 
 # define initialization
 init = tf.global_variables_initializer()
@@ -248,7 +249,7 @@ with tf.Session() as sess:
                     acc5_vec.append(acc5)
                     if (step // step_display) % check_reduce_rate == 0:
                         if sum(acc5_vec) / check_reduce_rate <= previous_acc5:
-                            learning_rate = learning_rate / 2
+                            learning_rate = learning_rate * 0.8
 
                         previous_acc5 = sum(acc5_vec) / check_reduce_rate
                         acc5_vec = []
@@ -273,11 +274,11 @@ with tf.Session() as sess:
         loader_val.reset()
         for i in range(num_batch//10):
             images_batch, labels_batch = loader_val.next_batch(batch_size)
-            t5_values, t5_labels, t5_values_relation, t5_labels_relation \
-                = sess.run([top5_values, top5_labels, top5_values_relation, top5_labels_relation],
-                                            feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
-            print_top_results(t5_values, t5_labels, t5_values_relation, t5_labels_relation, labels_batch)
-            acc1, acc5 = sess.run([accuracy1_relation, accuracy5_relation], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
+            # t5_values, t5_labels, t5_values_relation, t5_labels_relation \
+            #     = sess.run([top5_values, top5_labels, top5_values_relation, top5_labels_relation],
+            #                                 feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
+            # print_top_results(t5_values, t5_labels, t5_values_relation, t5_labels_relation, labels_batch)
+            acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
             acc1_total += acc1
             acc5_total += acc5
             print("Validation Accuracy Top1 = " + \
