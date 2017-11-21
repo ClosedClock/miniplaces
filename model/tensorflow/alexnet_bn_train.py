@@ -5,20 +5,36 @@ from tensorflow.contrib.layers.python.layers import batch_norm
 from DataLoader import *
 
 # Dataset Parameters
-batch_size = 64
+batch_size = 50
+# batch_size = 256
 load_size = 256
 fine_size = 224
 c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.0001
+learning_rate = 0.002
 dropout = 0.5 # Dropout, probability to keep units
-training_iters = 10000
-step_display = 50
-step_save = 1000
+# training_iters = 50000
+training_iters = 100000
+do_validation = True
+step_display = 10
+step_save = 5000
 path_save = './alexnet_bn'
 start_from = ''
+test_result_file = 'test_prediction.txt'
+
+# Start checking for rate reductions
+check_reduce_rate_threshold = 2500
+
+# Iterations to check if average accuracy has increased
+check_reduce_rate = 500 // step_display
+
+# Current maximum top-5 accuracy
+max_acc5 = 0
+
+# Vector of top-5 accuracies
+acc5_vec = []
 
 def batch_norm_layer(x, train_phase, scope_bn):
     return batch_norm(x, decay=0.9, center=True, scale=True,
@@ -112,8 +128,18 @@ opt_data_val = {
     'randomize': False
     }
 
+opt_data_test = {
+    #'data_h5': 'miniplaces_256_test.h5',
+    'data_root': '../../data/images/test/',   # MODIFY PATH ACCORDINGLY
+    'load_size': load_size,
+    'fine_size': fine_size,
+    'data_mean': data_mean,
+    'randomize': False
+    }
+
 loader_train = DataLoaderDisk(**opt_data_train)
 loader_val = DataLoaderDisk(**opt_data_val)
+loader_test = TestDataLoaderDisk(**opt_data_test)
 #loader_train = DataLoaderH5(**opt_data_train)
 #loader_val = DataLoaderH5(**opt_data_val)
 
@@ -125,6 +151,7 @@ train_phase = tf.placeholder(tf.bool)
 
 # Construct model
 logits = alexnet(x, keep_dropout, train_phase)
+top5_values, top5_labels = tf.nn.top_k(logits, k=5)
 
 # Define loss and optimizer
 loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits))
@@ -148,8 +175,10 @@ with tf.Session() as sess:
     # Initialization
     if len(start_from)>1:
         saver.restore(sess, start_from)
+        print('Started from last time: %s' % start_from)
     else:
         sess.run(init)
+        print('Initialized')
     
     step = 0
 
@@ -159,6 +188,7 @@ with tf.Session() as sess:
         
         if step % step_display == 0:
             print('[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            print("Learning rate is now" + str(learning_rate) + "\n")
 
             # Calculate batch loss and accuracy on training set
             l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False}) 
@@ -174,9 +204,21 @@ with tf.Session() as sess:
                   "{:.6f}".format(l) + ", Accuracy Top1 = " + \
                   "{:.4f}".format(acc1) + ", Top5 = " + \
                   "{:.4f}".format(acc5))
+
+            # Check if the accuracy is improving or not
+            if step >= check_reduce_rate_threshold:
+                acc5_vec.append(acc5)
+                if (step // step_display) % check_reduce_rate:
+                    if sum(acc5_vec) / check_reduce_rate <= max_acc5:
+                        learning_rate = learning_rate / 10
+                    else:
+                        max_acc5 = sum(acc5_vec) / check_reduce_rate
+
+                    acc5_vec = []
         
         # Run optimization op (backprop)
         sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout, train_phase: True})
+
         
         step += 1
         
@@ -189,20 +231,40 @@ with tf.Session() as sess:
 
 
     # Evaluate on the whole validation set
-    print('Evaluation on the whole validation set...')
-    num_batch = loader_val.size()//batch_size
-    acc1_total = 0.
-    acc5_total = 0.
-    loader_val.reset()
-    for i in range(num_batch):
-        images_batch, labels_batch = loader_val.next_batch(batch_size)    
-        acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
-        acc1_total += acc1
-        acc5_total += acc5
-        print("Validation Accuracy Top1 = " + \
-              "{:.4f}".format(acc1) + ", Top5 = " + \
-              "{:.4f}".format(acc5))
+    if do_validation:
+        print('Evaluation on the whole validation set...')
+        num_batch = loader_val.size()//batch_size
+        acc1_total = 0.
+        acc5_total = 0.
+        loader_val.reset()
+        for i in range(num_batch):
+            images_batch, labels_batch = loader_val.next_batch(batch_size)
+            acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
+            acc1_total += acc1
+            acc5_total += acc5
+            print("Validation Accuracy Top1 = " + \
+                  "{:.4f}".format(acc1) + ", Top5 = " + \
+                  "{:.4f}".format(acc5))
 
-    acc1_total /= num_batch
-    acc5_total /= num_batch
-    print('Evaluation Finished! Accuracy Top1 = ' + "{:.4f}".format(acc1_total) + ", Top5 = " + "{:.4f}".format(acc5_total))
+        acc1_total /= num_batch
+        acc5_total /= num_batch
+        print('Evaluation Finished! Accuracy Top1 = ' + "{:.4f}".format(acc1_total) + ", Top5 = " + "{:.4f}".format(acc5_total))
+
+
+    # Test on the test set
+    print('Evaluation on the whole test set...')
+    num_batch = loader_test.size()//batch_size
+    loader_test.reset()
+
+    with open(test_result_file, 'w') as f:
+        print('Opened file %s' % test_result_file)
+        for i in range(num_batch):
+            print('There are %d test images left' % (loader_test.size() - i * batch_size))
+            images_batch, filenames_batch = loader_test.next_batch(batch_size)
+            # predicted_labels.shape = (batch_size, 5)
+            predicted_labels = sess.run(top5_labels, feed_dict={x: images_batch, keep_dropout: 1., train_phase: False})
+            for j in range(len(filenames_batch)):
+                f.write(filenames_batch[j] + ' %d %d %d %d %d\n' % tuple(predicted_labels[j, :].tolist()))
+
+    print('Test Finished!')
+

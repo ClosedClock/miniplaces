@@ -87,7 +87,7 @@ def alexnet(x, keep_dropout):
 
 # Construct dataloader
 opt_data_train = {
-    #'data_h5': 'miniplaces_256_train.h5',
+    'data_h5': 'miniplaces_256_train.h5',
     'data_root': '../../data/images/',   # MODIFY PATH ACCORDINGLY
     'data_list': '../../data/train.txt', # MODIFY PATH ACCORDINGLY
     'load_size': load_size,
@@ -96,7 +96,7 @@ opt_data_train = {
     'randomize': True
     }
 opt_data_val = {
-    #'data_h5': 'miniplaces_256_val.h5',
+    'data_h5': 'miniplaces_256_val.h5',
     'data_root': '../../data/images/',   # MODIFY PATH ACCORDINGLY
     'data_list': '../../data/val.txt',   # MODIFY PATH ACCORDINGLY
     'load_size': load_size,
@@ -105,10 +105,10 @@ opt_data_val = {
     'randomize': False
     }
 
-loader_train = DataLoaderDisk(**opt_data_train)
-loader_val = DataLoaderDisk(**opt_data_val)
-#loader_train = DataLoaderH5(**opt_data_train)
-#loader_val = DataLoaderH5(**opt_data_val)
+#loader_train = DataLoaderDisk(**opt_data_train)
+#loader_val = DataLoaderDisk(**opt_data_val)
+loader_train = DataLoaderH5(**opt_data_train)
+loader_val = DataLoaderH5(**opt_data_val)
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [None, fine_size, fine_size, c])
