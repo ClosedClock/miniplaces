@@ -4,8 +4,15 @@ import numpy as np
 sss_url = "http://swoogle.umbc.edu/SimService/GetSimilarity"
 
 def sss(s1, s2, type='concept', corpus='webbase'):
-    response = get(sss_url, params={'operation':'api','phrase1':s1,'phrase2':s2,'type':type,'corpus':corpus})
-    return float(response.text.strip())
+	response_string = ''
+	while response_string == '':
+		response = get(sss_url, params={'operation':'api','phrase1':s1,'phrase2':s2,'type':type,'corpus':corpus})
+		response_string = response.text.strip()
+		if response_string == '-Infinity':
+			response_string = '0.0'
+	print s1, s2
+	print response_string
+	return float(response_string)
 
 
 def get_words_list():
@@ -34,3 +41,6 @@ def save_relation_matrix():
             relation[j][i] = relation[i][j]
     np.savez('relation.npz', relation)
     return relation
+
+
+print save_relation_matrix()
