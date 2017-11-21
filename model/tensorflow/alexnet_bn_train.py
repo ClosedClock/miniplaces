@@ -5,19 +5,19 @@ from tensorflow.contrib.layers.python.layers import batch_norm
 from DataLoader import *
 
 # Dataset Parameters
-batch_size = 256
+batch_size = 64
 load_size = 256
 fine_size = 224
 c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.001
+learning_rate = 0.0001
 dropout = 0.5 # Dropout, probability to keep units
-training_iters = 50000
+training_iters = 10000
 step_display = 50
-step_save = 10000
-path_save = 'alexnet_bn'
+step_save = 1000
+path_save = './alexnet_bn'
 start_from = ''
 
 def batch_norm_layer(x, train_phase, scope_bn):
@@ -71,6 +71,7 @@ def alexnet(x, keep_dropout, train_phase):
     conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
     conv5 = batch_norm_layer(conv5, train_phase, 'bn5')
     conv5 = tf.nn.relu(conv5)
+    #conv5 = conv4
     pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # FC + ReLU + Dropout
