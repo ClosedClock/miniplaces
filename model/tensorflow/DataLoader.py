@@ -98,7 +98,7 @@ class DataLoaderDisk(object):
         
     def next_batch(self, batch_size):
         images_batch = np.zeros((batch_size, self.fine_size, self.fine_size, 3)) 
-        labels_batch = np.zeros(batch_size)
+        labels_batch = np.zeros(batch_size, dtype = np.int)
         for i in range(batch_size):
             image = scipy.misc.imread(self.list_im[self._idx])
             image = scipy.misc.imresize(image, (self.load_size, self.load_size))

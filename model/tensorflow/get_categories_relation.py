@@ -43,9 +43,9 @@ def save_relation_matrix():
     np.savez('relation.npz', relation)
     return relation
 
-def plot_heatmap():
+def plot_heatmap(relation):
+    print('Going to plot heatmap')
     words_list = get_words_list()
-    relation = np.load('relation.npz')['arr_0']
 
     fig, ax = plt.subplots()
     fig.canvas.draw()
@@ -59,8 +59,10 @@ def plot_heatmap():
 
 
     cax = plt.imshow(relation, cmap='hot', interpolation='nearest')
-    cbar = fig.colorbar(cax, ticks=[0, 0.5, 1])
+    cbar = fig.colorbar(cax, ticks=[-1, 0, 1])
 
     plt.show()
 
 
+relation = np.load('relation.npz')['arr_0']
+plot_heatmap(relation)
