@@ -184,6 +184,8 @@ with tf.Session() as sess:
 
     step = 0
 
+    #learning_rate = 1
+
     while step < training_iters:
         # Load a batch of training data
         images_batch, labels_batch = loader_train.next_batch(batch_size)
