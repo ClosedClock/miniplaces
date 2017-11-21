@@ -13,22 +13,22 @@ c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.001
+learning_rate = 0.002
 dropout = 0.5 # Dropout, probability to keep units
 # training_iters = 50000
-training_iters = 0
-do_validation = False
-step_display = 50
-step_save = 10000
+training_iters = 100000
+do_validation = True
+step_display = 10
+step_save = 5000
 path_save = 'alexnet_bn'
-start_from = 'trained_model/alexnet_bn-10000'
+start_from = ''
 test_result_file = 'test_prediction.txt'
 
 # Start checking for rate reductions
 check_reduce_rate_threshold = 2500
 
 # Iterations to check if average accuracy has increased
-check_reduce_rate = 500
+check_reduce_rate = 500 // step_display
 
 # Current maximum top-5 accuracy
 max_acc5 = 0
@@ -136,8 +136,8 @@ opt_data_test = {
     'randomize': False
     }
 
-#loader_train = DataLoaderDisk(**opt_data_train)
-#loader_val = DataLoaderDisk(**opt_data_val)
+loader_train = DataLoaderDisk(**opt_data_train)
+loader_val = DataLoaderDisk(**opt_data_val)
 loader_test = TestDataLoaderDisk(**opt_data_test)
 #loader_train = DataLoaderH5(**opt_data_train)
 #loader_val = DataLoaderH5(**opt_data_val)
@@ -187,6 +187,7 @@ with tf.Session() as sess:
         
         if step % step_display == 0:
             print('[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            print("Learning rate is now" + str(learning_rate) + "\n")
 
             # Calculate batch loss and accuracy on training set
             l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False}) 
@@ -202,22 +203,21 @@ with tf.Session() as sess:
                   "{:.6f}".format(l) + ", Accuracy Top1 = " + \
                   "{:.4f}".format(acc1) + ", Top5 = " + \
                   "{:.4f}".format(acc5))
+
+            # Check if the accuracy is improving or not
+            if step >= check_reduce_rate_threshold:
+                acc5_vec.append(acc5)
+                if (step // step_display) % check_reduce_rate:
+                    if sum(acc5_vec) / check_reduce_rate <= max_acc5:
+                        learning_rate = learning_rate / 10
+                    else:
+                        max_acc5 = sum(acc5_vec) / check_reduce_rate
+
+                    acc5_vec = []
         
         # Run optimization op (backprop)
         sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout, train_phase: True})
-        
-        
-        # Check if the accuracy is improving or not
-		if step >= check_reduce_rate_threshold:
-			acc5_vec.append(acc5)
-			if step % check_reduce_rate:
-				if sum(acc5_vec)/check_reduce_rate <= max_acc5:
-					learning_rate = learning_rate/10  
-					print("Learning rate is now" + str(learning_rate) + "\n")
-				else:
-					max_acc5 = sum(acc5_vec)/check_reduce_rate
-					
-				acc5_vec = []
+
         
         step += 1
         
@@ -228,8 +228,9 @@ with tf.Session() as sess:
         
     print("Optimization Finished!")
 
+
+    # Evaluate on the whole validation set
     if do_validation:
-        # Evaluate on the whole validation set
         print('Evaluation on the whole validation set...')
         num_batch = loader_val.size()//batch_size
         acc1_total = 0.
@@ -259,9 +260,8 @@ with tf.Session() as sess:
         for i in range(num_batch):
             print('There are %d test images left' % (loader_test.size() - i * batch_size))
             images_batch, filenames_batch = loader_test.next_batch(batch_size)
+            # predicted_labels.shape = (batch_size, 5)
             predicted_labels = sess.run(top5_labels, feed_dict={x: images_batch, keep_dropout: 1., train_phase: False})
-            print(predicted_labels)
-            print(predicted_labels.shape)
             for j in range(len(filenames_batch)):
                 f.write(filenames_batch[j] + ' %d %d %d %d %d\n' % tuple(predicted_labels[j, :].tolist()))
 
