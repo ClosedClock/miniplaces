@@ -68,6 +68,7 @@ if do_testing:
 # loader_val = DataLoaderH5(**opt_data_val)
 
 net = resnet18(pretrained=False)
+net.cuda()
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
@@ -100,7 +101,7 @@ if do_training:
 
         # Load a batch of training data
         images_batch, labels_batch = loader_train.next_batch(batch_size)
-        images_batch, labels_batch = Variable(images_batch), Variable(labels_batch)
+        images_batch, labels_batch = Variable(images_batch.cuda()), Variable(labels_batch.cuda())
 
         outputs = net(images_batch)
         loss = criterion(outputs, labels_batch)
@@ -120,7 +121,7 @@ if do_training:
 
             # Calculate batch loss and accuracy on validation set
             images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)
-            images_batch_val, labels_batch_val = Variable(images_batch_val), Variable(labels_batch_val)
+            images_batch_val, labels_batch_val = Variable(images_batch_val.cuda()), Variable(labels_batch_val.cuda())
             outputs_val = net(images_batch_val)
             loss = criterion(outputs_val, labels_batch_val)  # 将output和labels使用叉熵计算损失
             acc1 = accuracy(1, outputs_val, labels_batch_val)
@@ -150,7 +151,7 @@ if do_validation:
     loader_val.reset()
     for i in range(num_batch // 10):
         images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)
-        images_batch_val, labels_batch_val = Variable(images_batch_val), Variable(labels_batch_val)
+        images_batch_val, labels_batch_val = Variable(images_batch_val.cuda()), Variable(labels_batch_val.cuda())
         outputs_val = net(images_batch_val)
         acc1 = accuracy(1, outputs_val, labels_batch_val)
         acc5 = accuracy(5, outputs_val, labels_batch_val)
@@ -177,7 +178,7 @@ if do_testing:
         for i in range(num_batch):
             print('There are %d test images left' % (loader_test.size() - i * batch_size))
             images_batch_test, filenames_batch = loader_test.next_batch(batch_size)
-            images_batch_test = Variable(images_batch_test)
+            images_batch_test = Variable(images_batch_test.cuda())
             outputs_test = net(images_batch_test)
             predicted_labels = top5_labels(outputs_test)
             for j in range(len(filenames_batch)):
