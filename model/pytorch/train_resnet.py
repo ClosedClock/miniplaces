@@ -21,14 +21,14 @@ learning_rate = 0.001
 dropout = 0.5  # Dropout, probability to keep units
 training_iters = 100000
 step_display = 10
-step_save = 2000
+step_save = 1000
 path_save = 'resnet.pt'
 start_from = ''
 test_result_file = 'test_prediction.txt'
 
 do_training = True
 do_validation = True
-do_testing = False
+do_testing = True
 
 # Construct dataloader
 opt_data_train = {
@@ -96,6 +96,7 @@ if do_training:
         print('Started from last time: %s' % start_from)
 
     for step in range(training_iters):
+        print('Start iter-%d' % step)
         # zero the parameter gradients
         optimizer.zero_grad()  # 将参数的grad值初始化为0
 
