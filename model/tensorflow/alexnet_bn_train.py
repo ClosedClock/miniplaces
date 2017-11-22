@@ -73,6 +73,7 @@ def alexnet(x, keep_dropout, train_phase):
         'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
         'wc4': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
         'wc5': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
+        'wc5-2': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
 
         'wf6': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
         'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
@@ -112,8 +113,14 @@ def alexnet(x, keep_dropout, train_phase):
     #conv5 = conv4
     pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
+    # Conv + ReLU + Pool, 13->6
+    conv5_2 = tf.nn.conv2d(conv5, weights['wc5-2'], strides=[1, 1, 1, 1], padding='SAME')
+    conv5_2 = batch_norm_layer(conv5_2, train_phase, 'bn5-2')
+    conv5_2 = tf.nn.relu(conv5_2)
+    pool5_2 = tf.nn.max_pool(conv5_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
     # FC + ReLU + Dropout
-    fc6 = tf.reshape(pool5, [-1, weights['wf6'].get_shape().as_list()[0]])
+    fc6 = tf.reshape(pool5_2, [-1, weights['wf6'].get_shape().as_list()[0]])
     fc6 = tf.matmul(fc6, weights['wf6'])
     fc6 = batch_norm_layer(fc6, train_phase, 'bn6')
     fc6 = tf.nn.relu(fc6)
