@@ -18,13 +18,13 @@ learning_rate = 0.001
 dropout = 0.5 # Dropout, probability to keep units
 # training_iters = 50000
 training_iters = 100000
-do_training = True
+do_training = False
 do_validation = True
-do_testing = True
+do_testing = False
 step_display = 10
 step_save = 5000
 path_save = './alexnet_bn'
-start_from = ''
+start_from = 'trained_model/one_more_layer/alexnet_bn-10000'
 test_result_file = 'test_prediction.txt'
 
 # # Start checking for rate reductions
